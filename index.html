@@ -49,7 +49,7 @@ function diagnose(message){
  const line="["+new Date().toLocaleTimeString()+"] "+message;
  state.diagnostics.push(line);
  if(state.diagnostics.length>100)state.diagnostics.shift();
- const panel=$("diagnostics");if(panel)panel.textContent=state.diagnostics.join("\\n");
+ const panel=$("diagnostics");if(panel)panel.textContent=state.diagnostics.join("\n");
 }
 function browserChecks(){
  diagnose("Browser: "+navigator.userAgent);
@@ -60,7 +60,7 @@ function browserChecks(){
  diagnose("Cross-origin isolated: "+(window.crossOriginIsolated?"yes":"no"));
 }
 $("copyDiagnostics").onclick=async()=>{
- const text=state.diagnostics.join("\\n");
+ const text=state.diagnostics.join("\n");
  try{await navigator.clipboard.writeText(text);$("copyDiagnostics").textContent="Copied";}
  catch{$("diagnostics").focus?.();$("copyDiagnostics").textContent="Select and copy the log above";}
 };
@@ -96,7 +96,8 @@ $("downloadAll").onclick=()=>state.items.filter(x=>x.url).forEach(x=>{const a=do
 async function getFFmpeg(){
  if(state.ffmpeg)return state.ffmpeg;
  const timed=async(promise,label,seconds=45)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" timed out after "+seconds+" seconds. Check whether your network allows jsDelivr/CDN files.")),seconds*1000))]);
- browserChecks();diagnose("Starting FFmpeg initialization.");\n state.stage="Downloading FFmpeg JavaScript…";diagnose(state.stage);render();
+ browserChecks();diagnose("Starting FFmpeg initialization.");
+ state.stage="Downloading FFmpeg JavaScript…";diagnose(state.stage);render();
  const {FFmpeg}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),"FFmpeg JavaScript download");diagnose("FFmpeg JavaScript loaded.");
  state.stage="Downloading utility library…";diagnose(state.stage);render();
  const {toBlobURL}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),"FFmpeg utility download");diagnose("FFmpeg utility library loaded.");
