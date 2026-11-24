@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10131c">
+<title>Universal Audio Converter</title>
+<style>
+:root{color-scheme:dark;--bg:#10131c;--panel:#191e2b;--panel2:#202738;--text:#f4f6fb;--muted:#aab3c5;--accent:#a78bfa;--accent2:#7c5ce7;--line:#30394d;--good:#70d6a3;--bad:#ff8585}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#342b58 0,transparent 48%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;align-items:center;gap:12px;margin-bottom:34px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#b69aff,#7054db);display:grid;place-items:center;font-size:23px;box-shadow:0 8px 30px #795de544}.brand{font-size:14px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:700}.hero{text-align:center;margin-bottom:30px}.hero h1{font-size:clamp(32px,6vw,52px);line-height:1.08;letter-spacing:-.04em;margin:0 0 13px}.hero h1 span{color:#b9a3ff}.hero p{color:var(--muted);margin:0;font-size:16px}
+.panel{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 22px 80px #0003}.drop{border:1.5px dashed #59627a;border-radius:17px;padding:38px 20px;text-align:center;background:#ffffff04;transition:.2s}.drop.drag{border-color:var(--accent);background:#a78bfa12}.drop .symbol{font-size:34px;margin-bottom:8px}.drop h2{font-size:19px;margin:0 0 5px}.drop p{color:var(--muted);margin:0 0 17px}.btn{border:0;border-radius:11px;background:var(--accent);color:#171226;padding:11px 17px;font-weight:750;cursor:pointer;font-size:14px}.btn:hover{background:#c0adff}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}input,select{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}#fileInput{display:none}.settings{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}.field label{display:block;color:var(--muted);font-size:13px;font-weight:650;margin-bottom:7px}.field select{width:100%}.queue-head{display:flex;justify-content:space-between;align-items:center;margin:25px 0 12px}.queue-head h2{font-size:16px;margin:0}.small{color:var(--muted);font-size:13px}.files{display:grid;gap:9px}.file{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:13px}.fname{font-weight:650;overflow-wrap:anywhere}.meta{color:var(--muted);font-size:12px;margin-top:3px}.status{font-size:12px;color:var(--muted);text-align:right}.status.done{color:var(--good)}.status.error{color:var(--bad)}.progress{height:4px;background:#3b4356;border-radius:8px;margin-top:8px;overflow:hidden}.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:19px}.notice{color:var(--muted);font-size:12px;margin:17px 2px 0}.notice strong{color:#d8d1ed}.footer{text-align:center;color:#798397;font-size:12px;margin-top:20px}a{color:#c4b4ff}
+@media(max-width:650px){main{margin-top:28px}.panel{padding:15px}.settings{grid-template-columns:1fr 1fr}.file{grid-template-columns:minmax(0,1fr)}.status{text-align:left}.drop{padding:30px 12px}}
+@media(max-width:390px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+ <div class="top"><div class="logo">♫</div><div><div style="font-weight:800;font-size:18px">Universal Audio Converter</div><div class="brand">Private · In your browser</div></div></div>
+ <header class="hero"><h1>Audio in. <span>Your format out.</span></h1><p>Convert audio files between popular formats, right on your device.</p></header>
+ <section class="panel">
+  <div class="drop" id="drop">
+   <div class="symbol">⇧</div><h2>Drop audio files here</h2><p>or choose files from your device</p>
+   <button class="btn" id="choose">Choose audio files</button>
+   <input id="fileInput" type="file" accept="audio/*,.m4a,.aac,.flac,.ogg,.opus,.wma,.aiff,.aif,.wav,.mp3" multiple>
+  </div>
+  <div class="settings">
+   <div class="field"><label for="format">Convert to</label><select id="format"><option value="mp3">MP3</option><option value="m4a">M4A (AAC)</option><option value="wav">WAV</option><option value="flac">FLAC</option><option value="aac">AAC</option><option value="ogg">OGG (Vorbis)</option><option value="opus">OPUS</option><option value="aiff">AIFF</option></select></div>
+   <div class="field"><label for="quality">Audio bitrate</label><select id="quality"><option value="128k">128 kbps</option><option value="192k" selected>192 kbps</option><option value="256k">256 kbps</option><option value="320k">320 kbps</option></select></div>
+   <div class="field"><label for="sample">Sample rate</label><select id="sample"><option value="original">Keep original</option><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select></div>
+  </div>
+  <div class="queue-head"><h2>Your files <span id="count" class="small">(0)</span></h2><button class="btn secondary" id="clear" disabled>Clear list</button></div>
+  <div class="files" id="files"><div class="small" style="text-align:center;padding:13px">Your selected files will appear here.</div></div>
+  <div class="actions"><button class="btn" id="convert" disabled>Convert files</button><button class="btn secondary" id="downloadAll" disabled>Download converted files</button></div>
+  <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
+ </section>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality</div>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id);
+const state={items:[],ffmpeg:null,loading:false};
+const outputExt={mp3:"mp3",m4a:"m4a",wav:"wav",flac:"flac",aac:"aac",ogg:"ogg",opus:"opus",aiff:"aiff"};
+const fmtBytes=n=>n<1024? n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB";
+const safeName=s=>s.replace(/\\.[^.]*$/,"").replace(/[^a-z0-9_-]+/gi,"_").slice(0,80)||"audio";
+function render(){
+ $("count").textContent="("+state.items.length+")";
+ $("clear").disabled=!state.items.length;
+ $("convert").disabled=!state.items.length||state.loading||state.items.every(x=>x.done);
+ $("convert").textContent=state.loading?"Converting…":"Convert files";
+ $("downloadAll").disabled=!state.items.some(x=>x.url);
+ $("files").innerHTML=state.items.length?"":"<div class='small' style='text-align:center;padding:13px'>Your selected files will appear here.</div>";
+ for(const item of state.items){
+  const el=document.createElement("div");el.className="file";
+  const left=document.createElement("div");const name=document.createElement("div");name.className="fname";name.textContent=item.file.name;
+  const meta=document.createElement("div");meta.className="meta";meta.textContent=fmtBytes(item.file.size)+(item.output?" · "+fmtBytes(item.output.size):"");
+  const bar=document.createElement("div");bar.className="progress";const fill=document.createElement("i");fill.style.width=item.progress+"%";bar.append(fill);
+  left.append(name,meta,bar);
+  const right=document.createElement("div");right.className="status "+(item.error?"error":item.done?"done":"");right.textContent=item.error?"Conversion failed":item.done?"Ready to download":item.progress?Math.round(item.progress)+"%":"Waiting";
+  if(item.url){const a=document.createElement("a");a.href=item.url;a.download=item.output.name;a.textContent="Download";a.style.display="block";a.style.marginTop="5px";right.append(a)}
+  el.append(left,right);$("files").append(el);
+ }
+}
+function addFiles(files){for(const file of files){if(!file.size)continue;if(state.items.some(x=>x.file.name===file.name&&x.file.size===file.size))continue;state.items.push({file,progress:0,done:false,error:false,url:null,output:null})}render()}
+$("choose").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>{addFiles(e.target.files);e.target.value=""};
+$("drop").ondragover=e=>{e.preventDefault();$("drop").classList.add("drag")};
+$("drop").ondragleave=()=> $("drop").classList.remove("drag");
+$("drop").ondrop=e=>{e.preventDefault();$("drop").classList.remove("drag");addFiles(e.dataTransfer.files)};
+$("clear").onclick=()=>{state.items.forEach(x=>x.url&&URL.revokeObjectURL(x.url));state.items=[];render()};
+$("downloadAll").onclick=()=>state.items.filter(x=>x.url).forEach(x=>{const a=document.createElement("a");a.href=x.url;a.download=x.output.name;a.click()});
+async function getFFmpeg(){
+ if(state.ffmpeg)return state.ffmpeg;
+ $("convert").textContent="Loading converter…";
+ const {FFmpeg}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js");
+ const {toBlobURL}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js");
+ const ff=new FFmpeg();
+ ff.on("progress",({progress})=>{if(state.current)state.current.progress=Math.max(0,Math.min(99,progress*100));render()});
+ const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+ await ff.load({coreURL:await toBlobURL(base+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")});
+ state.ffmpeg=ff;return ff;
+}
+function argsFor(ext,bitrate,sample){
+ const a=["-vn","-map_metadata","0"];
+ if(sample!=="original")a.push("-ar",sample);
+ if(ext==="mp3")a.push("-c:a","libmp3lame","-b:a",bitrate);
+ else if(ext==="m4a")a.push("-c:a","aac","-b:a",bitrate,"-f","ipod");
+ else if(ext==="aac")a.push("-c:a","aac","-b:a",bitrate,"-f","adts");
+ else if(ext==="ogg")a.push("-c:a","libvorbis","-b:a",bitrate);
+ else if(ext==="opus")a.push("-c:a","libopus","-b:a",bitrate);
+ else if(ext==="flac")a.push("-c:a","flac");
+ else if(ext==="wav")a.push("-c:a","pcm_s16le");
+ else if(ext==="aiff")a.push("-c:a","pcm_s16be","-f","aiff");
+ return a;
+}
+$("convert").onclick=async()=>{
+ if(state.loading)return;state.loading=true;state.items.forEach(x=>{if(!x.done){x.error=false;x.progress=0}});render();
+ try{
+  const ff=await getFFmpeg(),ext=$("format").value,bitrate=$("quality").value,sample=$("sample").value;
+  for(const item of state.items){if(item.done)continue;
+   state.current=item;const input="input_"+state.items.indexOf(item)+"_"+safeName(item.file.name)+"."+((item.file.name.split(".").pop()||"bin").replace(/[^a-z0-9]/gi,"").slice(0,8)||"bin");
+   const output="output_"+state.items.indexOf(item)+"."+outputExt[ext];
+   try{
+    await ff.writeFile(input,new Uint8Array(await item.file.arrayBuffer()));
+    await ff.exec(["-i",input,...argsFor(ext,bitrate,sample),output]);
+    const data=await ff.readFile(output);const mime={mp3:"audio/mpeg",m4a:"audio/mp4",wav:"audio/wav",flac:"audio/flac",aac:"audio/aac",ogg:"audio/ogg",opus:"audio/opus",aiff:"audio/aiff"}[ext];
+    item.output=new File([data],safeName(item.file.name)+"."+ext,{type:mime});item.url=URL.createObjectURL(item.output);item.done=true;item.progress=100;
+    await ff.deleteFile(input);await ff.deleteFile(output);
+   }catch(err){item.error=true;item.message=String(err);item.progress=0;console.error(err)}
+   render();
+  }
+ }catch(err){alert("Could not load the audio converter. Check your internet connection and try again.\n\n"+err)}
+ finally{state.loading=false;state.current=null;render()}
+};
+render();
+</script>
+</body></html>
