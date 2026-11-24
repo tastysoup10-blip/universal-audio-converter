@@ -32,13 +32,38 @@ main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;
   <div class="queue-head"><h2>Your files <span id="count" class="small">(0)</span></h2><button class="btn secondary" id="clear" disabled>Clear list</button></div>
   <div class="files" id="files"><div class="small" style="text-align:center;padding:13px">Your selected files will appear here.</div></div>
   <div class="actions"><button class="btn" id="convert" disabled>Convert files</button><button class="btn secondary" id="downloadAll" disabled>Download converted files</button></div>
+  <details style="margin-top:18px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px">
+   <summary style="cursor:pointer;font-weight:700">Troubleshooting diagnostics</summary>
+   <p class="small">This log records converter startup steps and browser support checks. It does not include your audio data.</p>
+   <pre id="diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;font:12px/1.5 ui-monospace,monospace;color:#d7dcef;margin:10px 0">Diagnostics will appear here when you start a conversion.</pre>
+   <button class="btn secondary" id="copyDiagnostics" type="button">Copy diagnostics</button>
+  </details>
   <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
  </section>
- <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.6</span></div>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.7</span></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
-const state={items:[],ffmpeg:null,loading:false,lastLog:"",stage:""};
+const state={items:[],ffmpeg:null,loading:false,lastLog:"",stage:"",diagnostics:[]};
+function diagnose(message){
+ const line="["+new Date().toLocaleTimeString()+"] "+message;
+ state.diagnostics.push(line);
+ if(state.diagnostics.length>100)state.diagnostics.shift();
+ const panel=$("diagnostics");if(panel)panel.textContent=state.diagnostics.join("\\n");
+}
+function browserChecks(){
+ diagnose("Browser: "+navigator.userAgent);
+ diagnose("Secure context: "+(window.isSecureContext?"yes":"no"));
+ diagnose("WebAssembly: "+(typeof WebAssembly!=="undefined"?"available":"unavailable"));
+ diagnose("Worker support: "+(typeof Worker!=="undefined"?"available":"unavailable"));
+ diagnose("SharedArrayBuffer: "+(typeof SharedArrayBuffer!=="undefined"?"available":"unavailable"));
+ diagnose("Cross-origin isolated: "+(window.crossOriginIsolated?"yes":"no"));
+}
+$("copyDiagnostics").onclick=async()=>{
+ const text=state.diagnostics.join("\\n");
+ try{await navigator.clipboard.writeText(text);$("copyDiagnostics").textContent="Copied";}
+ catch{$("diagnostics").focus?.();$("copyDiagnostics").textContent="Select and copy the log above";}
+};
 const outputExt={mp3:"mp3",m4a:"m4a",wav:"wav",flac:"flac",aac:"aac",ogg:"ogg",opus:"opus",aiff:"aiff"};
 const fmtBytes=n=>n<1024? n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB";
 const safeName=s=>s.replace(/\.[^.]*$/,"").replace(/[^a-z0-9_-]+/gi,"_").slice(0,80)||"audio";
@@ -71,20 +96,20 @@ $("downloadAll").onclick=()=>state.items.filter(x=>x.url).forEach(x=>{const a=do
 async function getFFmpeg(){
  if(state.ffmpeg)return state.ffmpeg;
  const timed=async(promise,label,seconds=45)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" timed out after "+seconds+" seconds. Check whether your network allows jsDelivr/CDN files.")),seconds*1000))]);
- state.stage="Downloading FFmpeg JavaScript…";render();
- const {FFmpeg}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),"FFmpeg JavaScript download");
- state.stage="Downloading utility library…";render();
- const {toBlobURL}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),"FFmpeg utility download");
+ browserChecks();diagnose("Starting FFmpeg initialization.");\n state.stage="Downloading FFmpeg JavaScript…";diagnose(state.stage);render();
+ const {FFmpeg}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),"FFmpeg JavaScript download");diagnose("FFmpeg JavaScript loaded.");
+ state.stage="Downloading utility library…";diagnose(state.stage);render();
+ const {toBlobURL}=await timed(import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),"FFmpeg utility download");diagnose("FFmpeg utility library loaded.");
  const ff=new FFmpeg();
- ff.on("log",({message})=>{state.lastLog=message;console.log("[FFmpeg]",message)});
+ ff.on("log",({message})=>{state.lastLog=message;diagnose("FFmpeg: "+message);console.log("[FFmpeg]",message)});
  ff.on("progress",({progress})=>{if(state.current)state.current.progress=Math.max(0,Math.min(99,progress*100));render()});
  const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
- state.stage="Preparing FFmpeg worker…";render();
- const classWorkerURL=await timed(toBlobURL("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js","text/javascript"),"FFmpeg worker download");
- state.stage="Downloading FFmpeg engine…";render();
- const coreURL=await timed(toBlobURL(base+"/ffmpeg-core.js","text/javascript"),"FFmpeg core JavaScript download");
- state.stage="Downloading FFmpeg WebAssembly…";render();
- const wasmURL=await timed(toBlobURL(base+"/ffmpeg-core.wasm","application/wasm"),"FFmpeg WebAssembly download",90);
+ state.stage="Preparing FFmpeg worker…";diagnose(state.stage);render();
+ const classWorkerURL=await timed(toBlobURL("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js","text/javascript"),"FFmpeg worker download");diagnose("Worker script fetched and converted to Blob URL.");
+ state.stage="Downloading FFmpeg engine…";diagnose(state.stage);render();
+ const coreURL=await timed(toBlobURL(base+"/ffmpeg-core.js","text/javascript"),"FFmpeg core JavaScript download");diagnose("FFmpeg core JavaScript downloaded.");
+ state.stage="Downloading FFmpeg WebAssembly…";diagnose(state.stage);render();
+ const wasmURL=await timed(toBlobURL(base+"/ffmpeg-core.wasm","application/wasm"),"FFmpeg WebAssembly download",90);diagnose("FFmpeg WebAssembly downloaded.");
  state.stage="Starting FFmpeg engine…";render();
  await timed(ff.load({classWorkerURL,coreURL,wasmURL}),"FFmpeg engine startup",60);
  state.ffmpeg=ff;state.stage="Converter ready";render();return ff;
@@ -120,7 +145,7 @@ $("convert").onclick=async()=>{
    }catch(err){item.error=true;item.message=String(err)+(state.lastLog?" · "+state.lastLog:"");item.progress=0;console.error(err)}
    render();
   }
- }catch(err){const item=state.current||state.items.find(x=>!x.done);if(item){item.error=true;item.message=String(err)}console.error(err)}
+ }catch(err){diagnose("ERROR: "+String(err));const item=state.current||state.items.find(x=>!x.done);if(item){item.error=true;item.message=String(err)}console.error(err)}
  finally{state.loading=false;state.current=null;state.stage="";render()}
 };
 render();
