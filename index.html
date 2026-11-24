@@ -40,7 +40,7 @@ main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;
   </details>
   <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
  </section>
- <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.8</span></div>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.9</span></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -109,10 +109,25 @@ async function getFFmpeg(){
  const coreURL=await timed(toBlobURL(base+"/ffmpeg-core.js","text/javascript"),"FFmpeg core JavaScript download");diagnose("FFmpeg core JavaScript downloaded.");
  state.stage="Downloading FFmpeg WebAssembly…";diagnose(state.stage);render();
  const wasmURL=await timed(toBlobURL(base+"/ffmpeg-core.wasm","application/wasm"),"FFmpeg WebAssembly download",90);diagnose("FFmpeg WebAssembly downloaded.");
+ state.stage="Preparing FFmpeg worker…";diagnose(state.stage);render();
+ // GitHub Pages cannot start a module worker directly from jsDelivr.
+ // Fetch the package worker, rewrite its two relative module imports to absolute
+ // CDN URLs, then create a same-origin-compatible Blob module worker.
+ const workerBase="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm";
+ const workerResponse=await timed(fetch(workerBase+"/worker.js"),"FFmpeg worker download");
+ if(!workerResponse.ok)throw new Error("Could not download FFmpeg worker: HTTP "+workerResponse.status);
+ let workerSource=await workerResponse.text();
+ workerSource=workerSource
+  .replaceAll('"./const.js"','"'+workerBase+'/const.js"')
+  .replaceAll("'./const.js'","'"+workerBase+"/const.js'")
+  .replaceAll('"./errors.js"','"'+workerBase+'/errors.js"')
+  .replaceAll("'./errors.js'","'"+workerBase+"/errors.js'");
+ if(workerSource.includes('"./const.js"')||workerSource.includes('"./errors.js"')||workerSource.includes("'./const.js'")||workerSource.includes("'./errors.js'"))throw new Error("Could not prepare FFmpeg worker module imports.");
+ const classWorkerURL=URL.createObjectURL(new Blob([workerSource],{type:"text/javascript"}));
  state.stage="Starting FFmpeg worker…";diagnose(state.stage);render();
- // Use the worker module beside the imported FFmpeg package. A Blob worker URL
- // can break relative imports because Blob URLs have no package directory.
- await timed(ff.load({coreURL,wasmURL}),"FFmpeg worker/engine startup",60);diagnose("FFmpeg engine started successfully.");
+ await timed(ff.load({coreURL,wasmURL,classWorkerURL}),"FFmpeg worker/engine startup",60);
+ URL.revokeObjectURL(classWorkerURL);
+ diagnose("FFmpeg engine started successfully.");
  state.ffmpeg=ff;state.stage="Converter ready";render();return ff;
 }
 function argsFor(ext,bitrate,sample){
