@@ -40,7 +40,7 @@ main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;
   </details>
   <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
  </section>
- <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.9</span></div>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.1.0</span></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -104,7 +104,7 @@ async function getFFmpeg(){
  const ff=new FFmpeg();
  ff.on("log",({message})=>{state.lastLog=message;diagnose("FFmpeg: "+message);console.log("[FFmpeg]",message)});
  ff.on("progress",({progress})=>{if(state.current)state.current.progress=Math.max(0,Math.min(99,progress*100));render()});
- const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+ const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
  state.stage="Downloading FFmpeg engine…";diagnose(state.stage);render();
  const coreURL=await timed(toBlobURL(base+"/ffmpeg-core.js","text/javascript"),"FFmpeg core JavaScript download");diagnose("FFmpeg core JavaScript downloaded.");
  state.stage="Downloading FFmpeg WebAssembly…";diagnose(state.stage);render();
