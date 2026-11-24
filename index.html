@@ -40,7 +40,7 @@ main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;
   </details>
   <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
  </section>
- <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.7</span></div>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.8</span></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -56,7 +56,7 @@ function browserChecks(){
  diagnose("Secure context: "+(window.isSecureContext?"yes":"no"));
  diagnose("WebAssembly: "+(typeof WebAssembly!=="undefined"?"available":"unavailable"));
  diagnose("Worker support: "+(typeof Worker!=="undefined"?"available":"unavailable"));
- diagnose("SharedArrayBuffer: "+(typeof SharedArrayBuffer!=="undefined"?"available":"unavailable"));
+ diagnose("SharedArrayBuffer: "+(typeof SharedArrayBuffer!=="undefined"?"available":"unavailable")+" (not required for the single-thread FFmpeg core)");
  diagnose("Cross-origin isolated: "+(window.crossOriginIsolated?"yes":"no"));
 }
 $("copyDiagnostics").onclick=async()=>{
@@ -105,14 +105,14 @@ async function getFFmpeg(){
  ff.on("log",({message})=>{state.lastLog=message;diagnose("FFmpeg: "+message);console.log("[FFmpeg]",message)});
  ff.on("progress",({progress})=>{if(state.current)state.current.progress=Math.max(0,Math.min(99,progress*100));render()});
  const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
- state.stage="Preparing FFmpeg worker…";diagnose(state.stage);render();
- const classWorkerURL=await timed(toBlobURL("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js","text/javascript"),"FFmpeg worker download");diagnose("Worker script fetched and converted to Blob URL.");
  state.stage="Downloading FFmpeg engine…";diagnose(state.stage);render();
  const coreURL=await timed(toBlobURL(base+"/ffmpeg-core.js","text/javascript"),"FFmpeg core JavaScript download");diagnose("FFmpeg core JavaScript downloaded.");
  state.stage="Downloading FFmpeg WebAssembly…";diagnose(state.stage);render();
  const wasmURL=await timed(toBlobURL(base+"/ffmpeg-core.wasm","application/wasm"),"FFmpeg WebAssembly download",90);diagnose("FFmpeg WebAssembly downloaded.");
- state.stage="Starting FFmpeg engine…";render();
- await timed(ff.load({classWorkerURL,coreURL,wasmURL}),"FFmpeg engine startup",60);
+ state.stage="Starting FFmpeg worker…";diagnose(state.stage);render();
+ // Use the worker module beside the imported FFmpeg package. A Blob worker URL
+ // can break relative imports because Blob URLs have no package directory.
+ await timed(ff.load({coreURL,wasmURL}),"FFmpeg worker/engine startup",60);diagnose("FFmpeg engine started successfully.");
  state.ffmpeg=ff;state.stage="Converter ready";render();return ff;
 }
 function argsFor(ext,bitrate,sample){
