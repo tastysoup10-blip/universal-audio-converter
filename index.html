@@ -34,11 +34,11 @@ main{width:min(940px,calc(100% - 32px));margin:52px auto 72px}.top{display:flex;
   <div class="actions"><button class="btn" id="convert" disabled>Convert files</button><button class="btn secondary" id="downloadAll" disabled>Download converted files</button></div>
   <p class="notice"><strong>Privacy:</strong> Files are processed locally in your browser; they are not uploaded to a server. Conversion uses FFmpeg.wasm and may take time for large files. Browser memory limits apply. Some uncommon codecs or protected files may not be supported.</p>
  </section>
- <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.4</span></div>
+ <div class="footer">Supports many common audio formats · Lossy conversions can reduce quality<br><span style="display:inline-block;margin-top:7px;color:#aab3c5">Version 1.0.5</span></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
-const state={items:[],ffmpeg:null,loading:false,lastLog:""};
+const state={items:[],ffmpeg:null,loading:false,lastLog:"",stage:""};
 const outputExt={mp3:"mp3",m4a:"m4a",wav:"wav",flac:"flac",aac:"aac",ogg:"ogg",opus:"opus",aiff:"aiff"};
 const fmtBytes=n=>n<1024? n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB";
 const safeName=s=>s.replace(/\.[^.]*$/,"").replace(/[^a-z0-9_-]+/gi,"_").slice(0,80)||"audio";
@@ -46,7 +46,7 @@ function render(){
  $("count").textContent="("+state.items.length+")";
  $("clear").disabled=!state.items.length;
  $("convert").disabled=!state.items.length||state.loading||state.items.every(x=>x.done);
- $("convert").textContent=state.loading?"Converting…":"Convert files";
+ $("convert").textContent=state.loading?(state.stage||"Starting…"):"Convert files";
  $("downloadAll").disabled=!state.items.some(x=>x.url);
  $("files").innerHTML=state.items.length?"":"<div class='small' style='text-align:center;padding:13px'>Your selected files will appear here.</div>";
  for(const item of state.items){
@@ -55,7 +55,7 @@ function render(){
   const meta=document.createElement("div");meta.className="meta";meta.textContent=fmtBytes(item.file.size)+(item.output?" · "+fmtBytes(item.output.size):"");
   const bar=document.createElement("div");bar.className="progress";const fill=document.createElement("i");fill.style.width=item.progress+"%";bar.append(fill);
   left.append(name,meta,bar);
-  const right=document.createElement("div");right.className="status "+(item.error?"error":item.done?"done":"");right.textContent=item.error?"Conversion failed":item.done?"Ready to download":item.progress?Math.round(item.progress)+"%":state.loading&&state.current===item?"Converting…":"Waiting";
+  const right=document.createElement("div");right.className="status "+(item.error?"error":item.done?"done":"");right.textContent=item.error?"Conversion failed":item.done?"Ready to download":item.progress?Math.round(item.progress)+"%":state.loading&&state.current===item?(state.stage||"Preparing…"):"Waiting";
   if(item.error&&item.message){const detail=document.createElement("div");detail.className="meta";detail.style.color="var(--bad)";detail.textContent=item.message;right.append(detail)}
   if(item.url){const a=document.createElement("a");a.href=item.url;a.download=item.output.name;a.textContent="Download";a.style.display="block";a.style.marginTop="5px";right.append(a)}
   el.append(left,right);$("files").append(el);
@@ -70,7 +70,7 @@ $("clear").onclick=()=>{state.items.forEach(x=>x.url&&URL.revokeObjectURL(x.url)
 $("downloadAll").onclick=()=>state.items.filter(x=>x.url).forEach(x=>{const a=document.createElement("a");a.href=x.url;a.download=x.output.name;a.click()});
 async function getFFmpeg(){
  if(state.ffmpeg)return state.ffmpeg;
- $("convert").textContent="Loading converter…";
+ state.stage="Loading FFmpeg…";render();
  const {FFmpeg}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js");
  const {toBlobURL}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js");
  const ff=new FFmpeg();
@@ -79,7 +79,7 @@ async function getFFmpeg(){
  const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
  const classWorkerURL=await toBlobURL("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js","text/javascript");
  await ff.load({classWorkerURL,coreURL:await toBlobURL(base+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")});
- state.ffmpeg=ff;return ff;
+ state.ffmpeg=ff;state.stage="Converter ready";render();return ff;
 }
 function argsFor(ext,bitrate,sample){
  const a=["-vn","-map_metadata","0"];
@@ -95,14 +95,15 @@ function argsFor(ext,bitrate,sample){
  return a;
 }
 $("convert").onclick=async()=>{
- if(state.loading)return;state.loading=true;state.items.forEach(x=>{if(!x.done){x.error=false;x.progress=0}});render();
+ if(state.loading)return;state.loading=true;state.stage="Starting…";state.current=state.items.find(x=>!x.done);state.items.forEach(x=>{if(!x.done){x.error=false;x.message="";x.progress=0}});render();
  try{
   const ff=await getFFmpeg(),ext=$("format").value,bitrate=$("quality").value,sample=$("sample").value;
   for(const item of state.items){if(item.done)continue;
-   state.current=item;const input="input_"+state.items.indexOf(item)+"_"+safeName(item.file.name)+"."+((item.file.name.split(".").pop()||"bin").replace(/[^a-z0-9]/gi,"").slice(0,8)||"bin");
+   state.current=item;state.stage="Preparing file…";render();const input="input_"+state.items.indexOf(item)+"_"+safeName(item.file.name)+"."+((item.file.name.split(".").pop()||"bin").replace(/[^a-z0-9]/gi,"").slice(0,8)||"bin");
    const output="output_"+state.items.indexOf(item)+"."+outputExt[ext];
    try{
-    await ff.writeFile(input,new Uint8Array(await item.file.arrayBuffer()));
+    state.stage="Reading file…";render();await ff.writeFile(input,new Uint8Array(await item.file.arrayBuffer()));
+    state.stage="Encoding…";render();
     const exitCode=await ff.exec(["-i",input,...argsFor(ext,bitrate,sample),output]);
     if(exitCode!==0)throw new Error("FFmpeg exited with code "+exitCode+(state.lastLog?": "+state.lastLog:""));
     const data=await ff.readFile(output);const mime={mp3:"audio/mpeg",m4a:"audio/mp4",wav:"audio/wav",flac:"audio/flac",aac:"audio/aac",ogg:"audio/ogg",opus:"audio/opus",aiff:"audio/aiff"}[ext];
@@ -111,8 +112,8 @@ $("convert").onclick=async()=>{
    }catch(err){item.error=true;item.message=String(err)+(state.lastLog?" · "+state.lastLog:"");item.progress=0;console.error(err)}
    render();
   }
- }catch(err){alert("Could not load the audio converter. Check your internet connection and try again.\n\n"+err)}
- finally{state.loading=false;state.current=null;render()}
+ }catch(err){const item=state.current||state.items.find(x=>!x.done);if(item){item.error=true;item.message=String(err)}console.error(err)}
+ finally{state.loading=false;state.current=null;state.stage="";render()}
 };
 render();
 </script>
